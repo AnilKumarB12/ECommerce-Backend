@@ -24,11 +24,12 @@ router.get("/:id", authMiddleWare, isAdmin, getSingleUser);
 router.delete("/:id", deleteSingleUser);
 
 // Define the "/Update-user" route for retrieving all users
-router.put("/update",authMiddleWare,isAdmin, updateSingleUser)
+router.put("/update",authMiddleWare, updateSingleUser)
 
-
+// Define the "/block-user" route for retrieving all users
 router.put("/block-user/:id",authMiddleWare,isAdmin, blockUser)
 
+// Define the "/Unblock-user" route for retrieving all users
 router.put("/unblock-user/:id",authMiddleWare,isAdmin, unBlockUser)
 
 // Export the router to make it accessible in other parts of the application
