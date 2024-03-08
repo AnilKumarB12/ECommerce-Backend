@@ -47,7 +47,6 @@ const loginUserCtrl = asyncHandler(async (req, res) => {
         });
 
         // If user exists and password matches, send user details and a JWT token in the response
-        //The optional chaining operator {?} prevents accessing properties on null or undefined values and short-circuits the expression, ensuring that the result is always undefined in such cases.
         res.json({
             _id: findUser?._id,
             fname: findUser?.fname,
@@ -62,20 +61,91 @@ const loginUserCtrl = asyncHandler(async (req, res) => {
     }
 });
 
-//Update a user
-const updateSingleUser = asyncHandler(async (req,res) =>{
-    const {id}= req.user;
+// Handle Refresh Token
+const handleRefreshToken = asyncHandler(async (req, res) => {
+    // Use object destructuring to access the refreshToken property in the cookies object
+    const { refreshToken } = req.cookies;
+
+    // Check if the refresh token is present in cookies
+    if (!refreshToken) {
+        throw new Error('No refresh token in cookies');
+    }
+
+    // Find user by refresh token in the database
+    const user = await User.findOne({ refreshToken });
+
+    // If no user is found, throw an error
+    if (!user) {
+        throw new Error('No refresh token exists in the database');
+    }
+
+    // Verify the refresh token and decode it
+    jwt.verify(refreshToken, process.env.JWT_SECRET, (err, decoded) => {
+        if (err || user.id !== decoded.id) {
+            throw new Error('There is something wrong with refreshToken');
+        }
+
+        // Generate a new access token and send it in the response
+        const accessToken = generateToken(user?._id);
+        res.json({ accessToken });
+    });
+
+    // Respond with the user object (Note: this line might not be reached due to the previous response)
+    res.json(user);
+});
+
+// Logout Functionality
+const logout = asyncHandler(async (req, res) => {
+    // Extract refresh token from cookies
+    const { refreshToken } = req.cookies;
+
+    // Check if the refresh token is present in cookies
+    if (!refreshToken) {
+        throw new Error('No refresh token in cookies');
+    }
+
+    // Find user by refresh token in the database
+    const user = await User.findOne({ refreshToken });
+
+    // If no user is found, clear the cookie and return forbidden status
+    if (!user) {
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: true,
+        });
+        return res.sendStatus(204); // Forbidden
+    }
+
+    // Update the user's document with an empty refresh token
+    await User.findOneAndUpdate({ refreshToken }, {
+        refreshToken: "",
+    });
+
+    // Clear the refresh token cookie and respond with forbidden status
+    res.clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: true,
+    });
+    res.sendStatus(204); // Forbidden
+});
+
+
+// Update a user
+const updateSingleUser = asyncHandler(async (req, res) => {
+    // Extract user ID from the authenticated user in the request
+    const { id } = req.user;
+    // Validate the MongoDB ID
     validateMongoDbId(id);
     try {
         // Update user information in the database based on the provided ID
         const updateUser = await User.findByIdAndUpdate(id, {
-            fname:req?.body.fname,
-            lname:req?.body.lname, 
-            email:req?.body.email, 
-            mobile:req?.body.mobile},
-            {new:true,}
-            )
-            res.json(updateUser)
+            fname: req?.body.fname,
+            lname: req?.body.lname,
+            email: req?.body.email,
+            mobile: req?.body.mobile
+        }, { new: true });
+        // Respond with the updated user information
+        res.json(updateUser);
     } catch (error) {
         // Throw an error if there's an issue updating the user
         throw new Error(error);
@@ -95,59 +165,115 @@ const getAllUser = asyncHandler(async (req, res) => {
     }
 });
 
-//Controller function to get a single user
-const getSingleUser = asyncHandler(async (req, res)=> {
-    const {id} = req.params;
+// Controller function to get a single user
+const getSingleUser = asyncHandler(async (req, res) => {
+    // Extract user ID from the request parameters
+    const { id } = req.params;
+    // Validate the MongoDB ID
     validateMongoDbId(id);
-    try{
-        // Retrieve a user from the database
-        const getUser = await User.findById(id)
-        res.json({getUser,});
-    }catch (error){
-        throw new Error(error)
+    try {
+        // Retrieve a single user from the database based on the provided ID
+        const getUser = await User.findById(id);
+        // Respond with the user information
+        res.json({ getUser });
+    } catch (error) {
+        // Throw an error if there's an issue retrieving the user
+        throw new Error(error);
     }
 });
 
-//Controller function to delete a single user
-const deleteSingleUser = asyncHandler(async (req, res)=> {
-    const {id} = req.params;
+// Controller function to delete a single user
+const deleteSingleUser = asyncHandler(async (req, res) => {
+    // Extract user ID from the request parameters
+    const { id } = req.params;
+    // Validate the MongoDB ID
     validateMongoDbId(id);
-    try{
-        // Delete a user in the database
-        const deleteUser = await User.findByIdAndDelete(id)
-        res.json({deleteUser},);
-    }catch (error){
-        throw new Error(error)
+    try {
+        // Delete a user in the database based on the provided ID
+        const deleteUser = await User.findByIdAndDelete(id);
+        // Respond with the deleted user information
+        res.json({ deleteUser });
+    } catch (error) {
+        // Throw an error if there's an issue deleting the user
+        throw new Error(error);
     }
 });
 
-const blockUser= asyncHandler(async(req,res)=>{
-    const {id}=req.params;
+// Controller function to block a user
+const blockUser = asyncHandler(async (req, res) => {
+    // Extract user ID from the request parameters
+    const { id } = req.params;
+    // Validate the MongoDB ID
     validateMongoDbId(id);
-    try{
-        const block =await User.findByIdAndUpdate(id, {
-            isBlocked:true,
-        },{
-            new:true,
-        })
-        res.json(block)
-    }catch(error){
-        throw new Error(error)
+    try {
+        // Update the user's 'isBlocked' field to 'true' in the database based on the provided ID
+        const block = await User.findByIdAndUpdate(id, {
+            isBlocked: true,
+        }, { new: true });
+        // Respond with the updated user information
+        res.json(block);
+    } catch (error) {
+        // Throw an error if there's an issue blocking the user
+        throw new Error(error);
     };
-})
-const unBlockUser= asyncHandler(async(req,res)=>{
-    const {id}=req.params;
+});
+
+// Controller function to unblock a user
+const unBlockUser = asyncHandler(async (req, res) => {
+    // Extract user ID from the request parameters
+    const { id } = req.params;
+    // Validate the MongoDB ID
     validateMongoDbId(id);
-    try{
-        const unblock =await User.findByIdAndUpdate(id, {
-            isBlocked:false,
-        },{
-            new:true,
-        })
-        res.json(unblock)
-    }catch(error){
-        throw new Error(error)
+    try {
+        // Update the user's 'isBlocked' field to 'false' in the database based on the provided ID
+        const unblock = await User.findByIdAndUpdate(id, {
+            isBlocked: false,
+        }, { new: true });
+        // Respond with the updated user information
+        res.json(unblock);
+    } catch (error) {
+        // Throw an error if there's an issue unblocking the user
+        throw new Error(error);
     };
+});
+
+const updatePassword = asyncHandler(async (req, res) => {
+    const {_id}= req.user;
+    const { password } = req.body;
+    validateMongoDbId(_id);
+    const user = await User.findById(_id);
+    if(password) {
+        user.password = password;
+        const updatedPassword = await user.save();
+        res.json(updatedPassword);
+    }else{
+        res.json(user);
+    }
 })
+
+const forgotPasswordToken  = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if(user) {
+        try {
+            const token = await user.createPasswordResetToken();
+            await user.save();
+            const resetURL = `Hi, Please follow this link to reset your password. This link is valid till 10 minutes from now.<a href="http://localhost:5000/api/user/reset-password/${token}">click here</a>`;
+            const data = {
+                to:email,
+                text:"Hey User",
+                subject:"forgot password link",
+                htm:resetURL,
+            };
+            sendEmail(data);
+            res.json(token);
+        }
+        catch(error){
+            throw new Error(error)
+        }
+    }else{
+        res.json({ message: "User not found with this Email" });
+    }
+});
 // Export the controller functions
 module.exports = { createUser, loginUserCtrl, getAllUser, getSingleUser, deleteSingleUser, handleRefreshToken, logout, updateSingleUser, blockUser, unBlockUser, updatePassword, forgotPasswordToken };
