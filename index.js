@@ -6,6 +6,8 @@ const dotenv = require("dotenv").config(); // Load environment variables from a 
 const PORT = process.env.PORT || 4000; // Set the port for the server
 const authRouter = require("./routes/authRoutes"); // Import the router for authentication routes
 const productRoute = require("./routes/productRoute");
+const prodCategoryRoute = require("./routes/prodCategoryRoute");
+const blogRoute = require("./routes/blogRoute");
 const bodyParser = require("body-parser"); // Parse incoming request bodies
 const { notFound, errorHandler } = require("./middlewares/errorHandler"); // Custom error handling middleware
 const cookieParser = require("cookie-parser")
@@ -18,12 +20,15 @@ app.use(morgan('dev'));
 // Use body-parser middleware to parse JSON and URL-encoded request bodies
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieParser());
 
 // Use the authentication router for routes starting with "/api/user"
 app.use("/api/user", authRouter);
 
 app.use("/api/product", productRoute);
+
+app.use("/api/blog", blogRoute);
+
+app.use("/api/category", prodCategoryRoute);
 
 // Custom middleware for handling 404 Not Found errors
 app.use(notFound);

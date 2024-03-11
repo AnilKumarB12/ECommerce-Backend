@@ -5,13 +5,15 @@ const express = require('express');
 const router = express.Router();
 
 // Import controller functions from the userControl module
-const { createUser, loginUserCtrl, getAllUser, getSingleUser, deleteSingleUser, updateSingleUser, blockUser, unBlockUser, handleRefreshToken, logout, updatePassword, forgotPasswordToken } = require("../controller/userControl");
+const { createUser, loginUserCtrl, getAllUser, getSingleUser, deleteSingleUser, updateSingleUser, blockUser, unBlockUser, handleRefreshToken, logout, updatePassword, forgotPasswordToken, resetPassword } = require("../controller/userControl");
 const {authMiddleWare, isAdmin }= require('../middlewares/authMiddleWare');
 
 // Define the "/register" route for creating a new user
 router.post("/register", createUser);
 
-router.post('/forgotPasswordToken', forgotPasswordToken)
+router.put('/reset-password/:token', resetPassword);
+
+router.post('/forgot-password-token', forgotPasswordToken)
 
 // Define the "/login" route for user login
 router.post("/login", loginUserCtrl);
