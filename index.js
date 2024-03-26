@@ -7,6 +7,8 @@ const PORT = process.env.PORT || 4000; // Set the port for the server
 const authRouter = require("./routes/authRoutes"); // Import the router for authentication routes
 const productRoute = require("./routes/productRoute");
 const prodCategoryRoute = require("./routes/prodCategoryRoute");
+const blogCategoryRoute = require("./routes/blogCatRoute");
+const brandRoute = require("./routes/brandRoute");
 const blogRoute = require("./routes/blogRoute");
 const bodyParser = require("body-parser"); // Parse incoming request bodies
 const { notFound, errorHandler } = require("./middlewares/errorHandler"); // Custom error handling middleware
@@ -29,6 +31,10 @@ app.use("/api/product", productRoute);
 app.use("/api/blog", blogRoute);
 
 app.use("/api/category", prodCategoryRoute);
+
+app.use("/api/blogCategory", blogCategoryRoute);
+
+app.use("/api/brand", brandRoute);
 
 // Custom middleware for handling 404 Not Found errors
 app.use(notFound);

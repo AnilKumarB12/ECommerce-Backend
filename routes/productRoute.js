@@ -1,5 +1,5 @@
 const express = require('express');
-const { createProduct, getProduct, getAllProducts, updateProduct, deleteProduct } = require('../controller/ProductControl');
+const { createProduct, getProduct, getAllProducts, updateProduct, deleteProduct, addToWishlist, rating } = require('../controller/ProductControl');
 const { isAdmin, authMiddleWare } = require('../middlewares/authMiddleWare');
 
 // Create a new router instance
@@ -12,6 +12,10 @@ router.post('/', authMiddleWare, isAdmin, createProduct);
 
 // Route to get a specific product by ID
 router.get('/:id', getProduct);
+
+router.put('/wishlist', authMiddleWare, addToWishlist);
+
+router.put('/rating', authMiddleWare, rating);
 
 // Route to update a product by ID
 router.put('/:id', authMiddleWare, isAdmin, updateProduct);
