@@ -3,6 +3,11 @@ const Blog = require("../models/blogModel");
 const validateMongoDbId = require("../utils/ValidateMongodbId");
 const User = require("../models/userModel");
 const asyncHandler = require("express-async-handler");
+const fs = require("fs");
+const {
+    cloudinaryUploadImg,
+    cloudinaryDeleteImg,
+} = require("../utils/cloudinary");
 
 // Middleware for creating a new blog post
 const createBlog = asyncHandler(async (req, res) => {
@@ -170,5 +175,38 @@ const dislikeBlog = asyncHandler(async (req, res) => {
     };
 });
 
+const uploadImages = async (req, res, next) => {
+    const { id } = req.params;
+    validateMongoDbId(id);
+    try {
+        const uploader = (path) => cloudinaryUploadImg(path, "images");
+        const urls = [];
+        const {files} = req;
+
+        for (const file of files) {
+            const { path } = file;
+            const newpath = await uploader(path);
+            urls.push(newpath.url);
+        };
+
+        const findBlog = await Blog.findByIdAndUpdate(id, { images: urls.map((file) => { return file }) }, { new: true });
+        res.json(findBlog);
+    } catch (error) {
+        console.error("Error uploading image to Cloudinary:", error);
+        next();
+    }
+};
+
+const deleteImages = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    try {
+        const deleted = cloudinaryDeleteImg(id, "images");
+        res.json({ message: "Deleted" });
+    } catch (error) {
+        throw new Error(error);
+    }
+});
+
+
 // Export all the middleware functions
-module.exports = { createBlog, updateBlog, getBlog, getAllBlogs, deleteBlog, likeBlog, dislikeBlog };
+module.exports = { createBlog, updateBlog, getBlog, getAllBlogs, deleteBlog, likeBlog, dislikeBlog, uploadImages, deleteImages };

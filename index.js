@@ -10,6 +10,7 @@ const prodCategoryRoute = require("./routes/prodCategoryRoute");
 const blogCategoryRoute = require("./routes/blogCatRoute");
 const brandRoute = require("./routes/brandRoute");
 const blogRoute = require("./routes/blogRoute");
+const couponRoute = require("./routes/couponRoute"); 
 const bodyParser = require("body-parser"); // Parse incoming request bodies
 const { notFound, errorHandler } = require("./middlewares/errorHandler"); // Custom error handling middleware
 const cookieParser = require("cookie-parser")
@@ -35,6 +36,8 @@ app.use("/api/category", prodCategoryRoute);
 app.use("/api/blogCategory", blogCategoryRoute);
 
 app.use("/api/brand", brandRoute);
+
+app.use("/api/coupon", couponRoute);
 
 // Custom middleware for handling 404 Not Found errors
 app.use(notFound);

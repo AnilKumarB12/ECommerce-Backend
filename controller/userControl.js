@@ -239,52 +239,53 @@ const unBlockUser = asyncHandler(async (req, res) => {
 });
 
 const updatePassword = asyncHandler(async (req, res) => {
-    const {_id}= req.user;
+    const { _id } = req.user;
     const { password } = req.body;
     validateMongoDbId(_id);
     const user = await User.findById(_id);
-    if(password) {
+    if (password) {
         user.password = password;
         const updatedPassword = await user.save();
         res.json(updatedPassword);
-    }else{
+    } else {
         res.json(user);
     }
 })
 
-const forgotPasswordToken  = asyncHandler(async (req, res) => {
-    const { email } = req.body;
-    const user = await User.findOne({ email });
-    if(!user) throw new Error("User not found with email: " + email);
+const forgotPasswordToken = asyncHandler(async (req, res) => {
+
     try {
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) { throw new Error("User not found with email: " + email); }
         const token = await user.createPasswordResetToken();
         await user.save();
         const resetURL = `Hi, Please follow this link to reset your password. This link is valid till 10 minutes from now.<a href="http://localhost:5000/api/user/reset-password/${token}">click here</a>`;
         const data = {
-            to:email,
-            text:"Hey User",
-            subject:"forgot password link",
-            htm:resetURL,
+            to: email,
+            text: "Hey User",
+            subject: "forgot password link",
+            htm: resetURL,
         };
         sendEmail(data);
-        res.json({token});
+        res.json({ token });
     }
-    catch(error){
+    catch (error) {
         throw new Error(error)
     }
 });
 
-const resetPassword =asyncHandler(async(req,res)=>{
-    const {password}= req.body;
-    const {token} = req.params;
+const resetPassword = asyncHandler(async (req, res) => {
+    const { password } = req.body;
+    const { token } = req.params;
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    const user = await User.findOne({passwordResetToken:hashedToken,passwordResetExpires:{$gt:Date.now()}});
-    if(!user)throw new Error('token expired, Please try again later');
-    user.password = password; 
+    const user = await User.findOne({ passwordResetToken: hashedToken, passwordResetExpires: { $gt: Date.now() } });
+    if (!user) { throw new Error('token expired, Please try again later'); }
+    user.password = password;
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
     await user.save();
     res.json(user);
 });
 // Export the controller functions
-module.exports = { createUser, loginUserCtrl, getAllUser, getSingleUser, deleteSingleUser, handleRefreshToken, logout, updateSingleUser, blockUser, unBlockUser, updatePassword, forgotPasswordToken, resetPassword};
+module.exports = { createUser, loginUserCtrl, getAllUser, getSingleUser, deleteSingleUser, handleRefreshToken, logout, updateSingleUser, blockUser, unBlockUser, updatePassword, forgotPasswordToken, resetPassword };

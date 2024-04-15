@@ -1,5 +1,6 @@
 const express = require('express');
-const { createProduct, getProduct, getAllProducts, updateProduct, deleteProduct, addToWishlist, rating } = require('../controller/ProductControl');
+const { createProduct, getProduct, getAllProducts, updateProduct, deleteProduct, addToWishlist, rating, uploadImages, deleteImages } = require('../controller/ProductControl');
+const {uploadPhoto, productImgResize} = require('../middlewares/uploadImg');
 const { isAdmin, authMiddleWare } = require('../middlewares/authMiddleWare');
 
 // Create a new router instance
@@ -9,6 +10,12 @@ const router  = express.Router();
 
 // Route to create a new product
 router.post('/', authMiddleWare, isAdmin, createProduct);
+
+router.put('/upload/:id', authMiddleWare, isAdmin, uploadPhoto.array("images", 10),
+productImgResize,
+uploadImages);
+
+router.put('/delete/:id', authMiddleWare, isAdmin, deleteImages);
 
 // Route to get a specific product by ID
 router.get('/:id', getProduct);
