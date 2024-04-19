@@ -171,31 +171,29 @@ const rating = asyncHandler(async (req, res) => {
 
 
 
-const uploadImages = async (req, res) => {
-    const { id } = req.params;
-    validateMongoDbId(id);
+const uploadImages =asyncHandler( async (req, res) => {
     try {
         const uploader = (path) => cloudinaryUploadImg(path, "images");
         const urls = [];
-        const { files } = req;
-
+// sourcery skip: use-object-destructuring
+        const files  = req.files;
         for (const file of files) {
             const { path } = file;
             const newpath = await uploader(path);
             urls.push(newpath.url)
-            try {
+            console.log(newpath);
+            /*try {
                 fs.unlinkSync(path);
               } catch (error) {
                 console.error(error);
-              }
+              }*/
         };
-
-        const findProduct = await Product.findByIdAndUpdate(id, { images: urls.map((file) => { return file }) }, { new: true });
-        res.json(findProduct);
+        const images =  urls.map((file) => { return file })
+        res.json(images);
     } catch (error) {
         console.error("Error uploading image to Cloudinary:", error);
     }
-};
+});
 
 
 const deleteImages = asyncHandler(async (req, res) => {
@@ -208,9 +206,6 @@ const deleteImages = asyncHandler(async (req, res) => {
     }
 });
 
-module.exports = {
-    uploadImages,
-    deleteImages,
-};
+
 
 module.exports = { createProduct, getProduct, getAllProducts, updateProduct, deleteProduct, addToWishlist, rating, uploadImages, deleteImages };

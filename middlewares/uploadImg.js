@@ -4,10 +4,10 @@ const path = require('path');
 const fs = require("fs");
 
 const multerStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, '../public/images'))
+    destination:function (req, file, cb) {
+        cb(null, path.join(__dirname, '../public/images/'))
     },
-    filename: (req, file, cb) => {
+    filename:function (req, file, cb) {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9)
         cb(null, file.fieldname + "-" + uniqueSuffix + '.jpeg')
     }
@@ -37,8 +37,9 @@ const productImgResize = async (req, res, next) => {
             .resize(300, 300)
             .toFormat("jpeg")
             .jpeg({ quality: 90 })
-            .toFile(`public\images${file.filename}`);
-        fs.unlinkSync(`public\images${file.filename}`);
+            .toFile(`public/images/products/${file.filename}`);
+            console.log("resized")
+        fs.unlinkSync(`public/images/products/${file.filename}`);
     }))
     next();
 }
@@ -52,16 +53,16 @@ const blogImgResize = async (req, res, next) => {
             .resize(300, 300)
             .toFormat("jpeg")
             .jpeg({ quality: 90 })
-            .toFile(`public/images${file.filename}`);
+            .toFile(`public/images/blogs/${file.filename}`);
             try {
-                fs.unlinkSync(`public/images${file.filename}`);
+                fs.unlinkSync(file.path); 
               } catch (error) {
                 console.error(error);
               }
 
     }));
     next();
-};
+}; 
 
 
 module.exports = { uploadPhoto, productImgResize, blogImgResize };

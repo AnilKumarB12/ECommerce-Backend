@@ -11,9 +11,7 @@ const router  = express.Router();
 // Route to create a new product
 router.post('/', authMiddleWare, isAdmin, createProduct);
 
-router.put('/upload/:id', authMiddleWare, isAdmin, uploadPhoto.array("images", 10),
-productImgResize,
-uploadImages);
+router.put('/upload/', authMiddleWare, isAdmin, uploadPhoto.array("images", 10), productImgResize, uploadImages);
 
 router.put('/delete/:id', authMiddleWare, isAdmin, deleteImages);
 
@@ -29,6 +27,8 @@ router.put('/:id', authMiddleWare, isAdmin, updateProduct);
 
 // Route to delete a product by ID
 router.delete('/:id', authMiddleWare, isAdmin, deleteProduct);
+
+router.delete('/delete/:id', authMiddleWare, isAdmin, deleteImages);
 
 // Route to get all products
 router.get('/', getAllProducts);

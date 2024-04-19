@@ -1,6 +1,11 @@
 // Import necessary modules and packages
+var uniqid = require('uniqid');  // for generating unique id for payment methods
 const { generateToken } = require("../config/jwtToken"); // Import the function to generate JWT tokens
 const User = require("../models/userModel"); // Import the User model
+const Product = require("../models/productModel"); // Import the Product model
+const Coupon = require("../models/couponModel"); // Import the coupon model
+const Order = require("../models/orderModel"); // Import the Order model
+const Cart = require("../models/cartModel"); // Import the Product model
 const asyncHandler = require("express-async-handler"); // Import the express-async-handler utility
 const validateMongoDbId = require("../utils/ValidateMongodbId");
 const { generateRefreshToken } = require("../config/refreshToken");
@@ -55,6 +60,50 @@ const loginUserCtrl = asyncHandler(async (req, res) => {
             email: findUser?.email,
             mobile: findUser?.mobile,
             token: generateToken(findUser?._id),
+        });
+    } else {
+        // Throw an error for invalid credentials
+        throw new Error("Invalid Credentials");
+    }
+});
+
+
+//Admin login
+
+// Controller function for user login
+// Login User Controller
+const loginAdmin = asyncHandler(async (req, res) => {
+    // Extract email and password from the request body
+    const { email, password } = req.body;
+
+    // Check if user exists and the password matches
+    const findAdmin = await User.findOne({ email });
+    if (findAdmin.role !== 'admin') {
+        throw new Error("Not Authorized");
+    }
+    if (findAdmin && (await findAdmin.isPasswordMatched(password))) {
+        // Generate a new refresh token
+        const refreshToken = await generateRefreshToken(findAdmin?._id);
+
+        // Update the user's document with the new refresh token
+        const updateuser = await User.findByIdAndUpdate(findAdmin.id, {
+            refreshToken: refreshToken,
+        }, { new: true });
+
+        // Set the refresh token as an HTTP-only cookie with a 72-hour expiry
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            maxAge: 72 * 60 * 60 * 1000,
+        });
+
+        // If user exists and password matches, send user details and a JWT token in the response
+        res.json({
+            _id: findAdmin?._id,
+            fname: findAdmin?.fname,
+            lname: findAdmin?.lname,
+            email: findAdmin?.email,
+            mobile: findAdmin?.mobile,
+            token: generateToken(findAdmin?._id),
         });
     } else {
         // Throw an error for invalid credentials
@@ -152,6 +201,25 @@ const updateSingleUser = asyncHandler(async (req, res) => {
         throw new Error(error);
     }
 });
+
+
+//save user address
+const saveAddress = asyncHandler(async (req, res, next) => {
+    const { id } = req.user;
+    // Validate the MongoDB ID
+    validateMongoDbId(id);
+    try {
+        // Update user information in the database based on the provided ID
+        const updateUser = await User.findByIdAndUpdate(id, {
+            address: req?.body?.address,
+        }, { new: true });
+        // Respond with the updated user information
+        res.json(updateUser);
+    } catch (error) {
+        // Throw an error if there's an issue updating the user
+        throw new Error(error);
+    }
+})
 
 // Controller function to get all users
 const getAllUser = asyncHandler(async (req, res) => {
@@ -287,5 +355,186 @@ const resetPassword = asyncHandler(async (req, res) => {
     await user.save();
     res.json(user);
 });
+
+const getWishlist = asyncHandler(async (req, res) => {
+    const { _id } = req.user;
+    try {
+        const findUser = await User.findById(_id).populate('wishlist');
+        res.json(findUser);
+
+    } catch (error) {
+        throw new Error(error);
+    }
+})
+
+const userCart = asyncHandler(async (req, res) => {
+    const { cart } = req.body;
+    const { _id } = req.user;
+    validateMongoDbId(_id)
+    try {
+        let products = [];
+        const user = await User.findById(_id);
+        //check if user already have products in cart
+        const alreadyExistCart = await Cart.findOne({ orderby: user._id });
+        if (alreadyExistCart) {
+            await Cart.findOneAndDelete({ orderby: user._id });
+        }
+        for (let i = 0; i < cart.length; i++) {
+            let object = {}
+            object.product = cart[i]._id;
+            object.count = cart[i].count;
+            object.color = cart[i].color;
+            let getPrice = await Product.findById(cart[i]._id).select("price").exec();
+            object.price = getPrice.price;
+            products.push(object);
+        }
+        let cartTotal = 0;
+        for (let i = 0; i < products.length; i++) {
+            cartTotal += products[i].price * products[i].count;
+        }
+        let newCart = await new Cart({
+            products,
+            cartTotal,
+            orderby: user?._id
+        }).save();
+        res.json(newCart);
+    } catch (error) {
+        throw new Error(error);
+    }
+});
+
+
+const getUserCart = asyncHandler(async (req, res) => {
+    const { _id } = req.user;
+    validateMongoDbId(_id);
+    try {
+        const cart = await Cart.findOne({ orderby: _id }).populate("products.product")
+        res.json(cart);
+    } catch (error) {
+        throw new Error(error);
+    }
+})
+
+const emptyCart = asyncHandler(async (req, res) => {
+    const { _id } = req.user;
+    validateMongoDbId(_id);
+    try {
+        const user = await User.findOne({ _id });
+        const cart = await Cart.findOneAndDelete({ orderby: user._id });
+        res.json(cart);
+    } catch (error) {
+        throw new Error(error);
+    }
+})
+
+const applyCoupon = asyncHandler(async (req, res) => {
+    const { coupon } = req.body;
+    const { _id } = req.user;
+    validateMongoDbId(_id);
+    const validCoupon = await Coupon.findOne({ name: coupon });
+    if (validCoupon === null) {
+        throw new Error('Invalid Coupon');
+    }
+    const user = await User.findOne({ _id });
+    const cart = await Cart.findOne({ orderby: user._id }).populate("products.product");
+    if (!cart) {
+        throw new Error('Cart not found');
+    }
+    let cartTotal = 0;
+    for (const item of cart.products) {
+        cartTotal += item.product.price * item.count;
+    }
+
+    let totalAfterDiscount = (cartTotal - (cartTotal * validCoupon.discount) / 100).toFixed(2);
+    cart.totalAfterDiscount = totalAfterDiscount;
+    await cart.save();
+    res.json(totalAfterDiscount)
+
+
+});
+
+const createOrder = asyncHandler(async (req, res) => {
+    const { COD, couponApplied } = req.body;
+    const { _id } = req.user;
+    validateMongoDbId(_id);
+    try {
+        if (!COD) {
+            throw new Error('Create cash order failed');
+        }
+        const user = await User.findById({ _id });
+        let userCart = await Cart.findOne({ orderby: user._id });
+        let finalAmount = 0;
+        if (couponApplied && userCart.totalAfterDiscount) {
+            finalAmount = userCart.totalAfterDiscount;
+        } else {
+            finalAmount = userCart.cartTotal;
+        }
+
+        let newOrder = await new Order({ products: userCart.products, paymentIntent: { id: uniqid(), method: "COD", amount: finalAmount, status: "Cash On Delivery", currency: "₹" }, orderby: user._id, orderStatus: "Cash On Delivery" }).save()
+
+        let updateQuantity = userCart.products.map((item) => {
+            return {
+                updateOne: {
+                    filter: { _id: item.product._id },
+                    update: { $inc: { quantity: -item.count, sold: +item.count } }
+                }
+            }
+        })
+        const updated = await Product.bulkWrite(updateQuantity, {});
+        res.json({ message: "success" });
+    } catch (error) {
+        throw new Error(error);
+    }
+
+});
+
+const getOrders = asyncHandler(async (req, res) => {
+    const { _id } = req.user;
+    validateMongoDbId(_id);
+    try {
+      const userOrders = await Order.findOne({ orderby: _id })
+        .populate("products.product")
+        .populate("orderby")
+        .exec();
+      res.json(userOrders);
+    } catch (error) {
+      throw new Error(error);
+    }
+  });
+  
+  const getAllOrders = asyncHandler(async (req, res) => {
+    try {
+      const allUsersOrders = await Order.find()
+        .populate("products.product")
+        .populate("orderby")
+        .exec();
+      res.json(allUsersOrders);
+    } catch (error) {
+      throw new Error(error);
+    }
+  });
+
+
+  const updateOrderStatus = asyncHandler(async (req, res) => {
+    const { status } = req.body;
+    const { id } = req.params;
+    validateMongoDbId(id);
+    try {
+      const updateOrderStatus = await Order.findByIdAndUpdate(
+        id,
+        {
+          orderStatus: status,
+          paymentIntent: {
+            status: status,
+          },
+        },
+        { new: true }
+      );
+      res.json(updateOrderStatus);
+    } catch (error) {
+      throw new Error(error);
+    }
+  });
+
 // Export the controller functions
-module.exports = { createUser, loginUserCtrl, getAllUser, getSingleUser, deleteSingleUser, handleRefreshToken, logout, updateSingleUser, blockUser, unBlockUser, updatePassword, forgotPasswordToken, resetPassword };
+module.exports = { createUser, loginUserCtrl, loginAdmin, getAllUser, getSingleUser, deleteSingleUser, handleRefreshToken, logout, updateSingleUser, blockUser, unBlockUser, updatePassword, forgotPasswordToken, resetPassword, getWishlist, saveAddress, userCart, getUserCart, emptyCart, applyCoupon, createOrder, getOrders, getAllOrders, updateOrderStatus };

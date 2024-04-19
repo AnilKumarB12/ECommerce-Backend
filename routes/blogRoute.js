@@ -7,7 +7,7 @@ const { uploadPhoto, blogImgResize } = require('../middlewares/uploadImg');
 // Route for creating a new blog post
 router.post('/', authMiddleWare, isAdmin, createBlog);
 
-router.put('/upload/:id', authMiddleWare, isAdmin, uploadPhoto.array("images", 10),
+router.put('/upload/', authMiddleWare, isAdmin, uploadPhoto.array("images", 10),
 blogImgResize ,
 uploadImages);
 

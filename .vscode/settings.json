@@ -5,6 +5,8 @@
         "fieldname",
         "prodcategory",
         "Routesjs",
+        "sourcery",
+        "uniqid",
         "updateuser",
         "virtuals"
     ]

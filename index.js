@@ -9,6 +9,8 @@ const productRoute = require("./routes/productRoute");
 const prodCategoryRoute = require("./routes/prodCategoryRoute");
 const blogCategoryRoute = require("./routes/blogCatRoute");
 const brandRoute = require("./routes/brandRoute");
+const colorRoute = require("./routes/colorRoutes");
+const enqRoute = require("./routes/enqRoutes");
 const blogRoute = require("./routes/blogRoute");
 const couponRoute = require("./routes/couponRoute"); 
 const bodyParser = require("body-parser"); // Parse incoming request bodies
@@ -36,6 +38,10 @@ app.use("/api/category", prodCategoryRoute);
 app.use("/api/blogCategory", blogCategoryRoute);
 
 app.use("/api/brand", brandRoute);
+
+app.use("/api/color", colorRoute);
+
+app.use("/api/enquiry", enqRoute);
 
 app.use("/api/coupon", couponRoute);
 
