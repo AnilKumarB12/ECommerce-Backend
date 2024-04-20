@@ -1,13 +1,13 @@
-const Product = require('../models/productModel');
-const User = require('../models/userModel');
-const asyncHandler = require('express-async-handler');
-const slugify = require('slugify');
-const validateMongoDbId = require('../utils/ValidateMongodbId');
-const fs = require("fs");
+const Product = require('../models/productModel'); // Import the Product model
+const User = require('../models/userModel'); // Import the User model
+const asyncHandler = require('express-async-handler'); // Import asyncHandler middleware
+const slugify = require('slugify'); // Import slugify for generating slugs
+const validateMongoDbId = require('../utils/ValidateMongodbId'); // Import MongoDB ID validation utility
+const fs = require("fs"); // Import file system module
 const {
     cloudinaryUploadImg,
     cloudinaryDeleteImg,
-} = require("../utils/cloudinary");
+} = require("../utils/cloudinary"); // Import functions for interacting with Cloudinary
 
 // Create a new product
 const createProduct = asyncHandler(async (req, res) => {
@@ -16,8 +16,8 @@ const createProduct = asyncHandler(async (req, res) => {
         if (req.body.title) {
             req.body.slug = slugify(req.body.title);
         }
-        const newProduct = await Product.create(req.body);
-        res.json(newProduct);
+        const newProduct = await Product.create(req.body); // Create a new product with the request body
+        res.json(newProduct); // Respond with the newly created product
     } catch (error) {
         // Handle errors
         throw new Error(error);
@@ -26,15 +26,15 @@ const createProduct = asyncHandler(async (req, res) => {
 
 // Update a product
 const updateProduct = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    validateMongoDbId(id);
+    const { id } = req.params; // Extract the ID of the product to update from request parameters
+    validateMongoDbId(id); // Validate the MongoDB ID
     try {
         // Generate a slug from the updated product title
         if (req.body.title) {
             req.body.slug = slugify(req.body.title);
         }
-        const updatedProduct = await Product.findByIdAndUpdate(id, req.body, { new: true });
-        res.json(updatedProduct);
+        const updatedProduct = await Product.findByIdAndUpdate(id, req.body, { new: true }); // Find the product by ID and update it with the request body
+        res.json(updatedProduct); // Respond with the updated product
     } catch (error) {
         // Handle errors
         throw new Error(error);
@@ -43,14 +43,14 @@ const updateProduct = asyncHandler(async (req, res) => {
 
 // Delete a product
 const deleteProduct = asyncHandler(async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.params; // Extract the ID of the product to delete from request parameters
     try {
         // Generate a slug from the product title (not used in delete, can be removed)
         if (req.body.title) {
             req.body.slug = slugify(req.body.title);
         }
-        const deletedProduct = await Product.findByIdAndDelete(id);
-        res.json(deletedProduct);
+        const deletedProduct = await Product.findByIdAndDelete(id); // Find the product by ID and delete it
+        res.json(deletedProduct); // Respond with the deleted product
     } catch (error) {
         // Handle errors
         throw new Error(error);
@@ -59,10 +59,10 @@ const deleteProduct = asyncHandler(async (req, res) => {
 
 // Get a specific product by ID
 const getProduct = asyncHandler(async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.params; // Extract the ID of the product to retrieve from request parameters
     try {
-        const findProduct = await Product.findById(id);
-        res.json(findProduct);
+        const findProduct = await Product.findById(id); // Find the product by ID
+        res.json(findProduct); // Respond with the retrieved product
     } catch (error) {
         // Handle errors
         throw new Error(error);
@@ -109,25 +109,26 @@ const getAllProducts = asyncHandler(async (req, res) => {
         }
         const product = await query;
 
-        res.json(product);
+        res.json(product); // Respond with the list of products
     } catch (error) {
         // Handle errors
         throw new Error(error);
     }
 });
 
+// Add a product to the user's wishlist
 const addToWishlist = asyncHandler(async (req, res) => {
-    const { _id } = req.user;
-    const { prodId } = req.body;
+    const { _id } = req.user; // Extract the ID of the user from the request user object
+    const { prodId } = req.body; // Extract the ID of the product to add from the request body
     try {
-        const user = await User.findById(_id);
-        const alreadyAdded = user.wishlist.find((id) => id.toString() === prodId);
+        const user = await User.findById(_id); // Find the user by ID
+        const alreadyAdded = user.wishlist.find((id) => id.toString() === prodId); // Check if the product is already in the wishlist
         if (alreadyAdded) {
-            let user = await User.findByIdAndUpdate(_id, { $pull: { wishlist: prodId } }, { new: true });
-            res.json(user);
+            let user = await User.findByIdAndUpdate(_id, { $pull: { wishlist: prodId } }, { new: true }); // If already added, remove the product from the wishlist
+            res.json(user); // Respond with the updated user
         } else {
-            let user = await User.findByIdAndUpdate(_id, { $push: { wishlist: prodId } }, { new: true });
-            res.json(user);
+            let user = await User.findByIdAndUpdate(_id, { $push: { wishlist: prodId } }, { new: true }); // If not added, add the product to the wishlist
+            res.json(user); // Respond with the updated user
         }
     }
     catch (error) {
@@ -136,14 +137,15 @@ const addToWishlist = asyncHandler(async (req, res) => {
     }
 });
 
+// Rate a product
 const rating = asyncHandler(async (req, res) => {
-    const { _id } = req.user;
-    const { star, prodId, comment } = req.body;
-    const product = await Product.findById(prodId);
-    const alreadyRated = product.ratings.find((userId) => userId.postedBy.toString() === _id.toString());
+    const { _id } = req.user; // Extract the ID of the user from the request user object
+    const { star, prodId, comment } = req.body; // Extract rating details from the request body
+    const product = await Product.findById(prodId); // Find the product by ID
+    const alreadyRated = product.ratings.find((userId) => userId.postedBy.toString() === _id.toString()); // Check if the user has already rated the product
     try {
         if (alreadyRated) {
-            const updateRating = await Product.updateOne({ ratings: { $elemMatch: alreadyRated } }, { $set: { "ratings.$.star": star, "ratings.$.comment": comment } }, { new: true });
+            const updateRating = await Product.updateOne({ ratings: { $elemMatch: alreadyRated } }, { $set: { "ratings.$.star": star, "ratings.$.comment": comment } }, { new: true }); // If already rated, update the rating
         }
         else {
             const rateProduct = await Product.findByIdAndUpdate(prodId, {
@@ -154,58 +156,49 @@ const rating = asyncHandler(async (req, res) => {
                         postedBy: _id
                     }
                 }
-            }, { new: true });
+            }, { new: true }); // If not rated, add a new rating
         }
-        const getAllRatings = await Product.findById(prodId);
+        const getAllRatings = await Product.findById(prodId); // Get all ratings for the product
         let totalRatings = getAllRatings.ratings.length;
-        let sumOfRatings = getAllRatings.ratings.map((item) => item.star).reduce((prev, cur) => prev + cur, 0);
-        let actualRating = Math.round(sumOfRatings / totalRatings);
-        let finalProduct = await Product.findByIdAndUpdate(prodId, { totalRatings: actualRating }, { new: true });
-        res.json(finalProduct);
+        let sumOfRatings = getAllRatings.ratings.map((item) => item.star).reduce((prev, cur) => prev + cur, 0); // Calculate the sum of ratings
+        let actualRating = Math.round(sumOfRatings / totalRatings); // Calculate the average rating
+        let finalProduct = await Product.findByIdAndUpdate(prodId, { totalRatings: actualRating }, { new: true }); // Update the total rating for the product
+        res.json(finalProduct); // Respond with the updated product
     } catch (error) {
         // Handle errors
         throw new Error(error);
     }
-
 });
 
-
-
-const uploadImages =asyncHandler( async (req, res) => {
+// Upload images to Cloudinary
+const uploadImages = asyncHandler(async (req, res) => {
     try {
-        const uploader = (path) => cloudinaryUploadImg(path, "images");
+        const uploader = (path) => cloudinaryUploadImg(path, "images"); // Define a function for uploading images to Cloudinary
         const urls = [];
-// sourcery skip: use-object-destructuring
-        const files  = req.files;
+        // sourcery skip: use-object-destructuring
+        const files = req.files; // Extract uploaded files from the request
         for (const file of files) {
-            const { path } = file;
-            const newpath = await uploader(path);
-            urls.push(newpath.url)
-            console.log(newpath);
-            /*try {
-                fs.unlinkSync(path);
-              } catch (error) {
-                console.error(error);
-              }*/
+            const { path } = file; // Extract the file path
+            const newpath = await uploader(path); // Upload the image to Cloudinary
+            urls.push(newpath.url); // Push the URL of the uploaded image to the array
         };
-        const images =  urls.map((file) => { return file })
-        res.json(images);
+        const images = urls.map((file) => { return file }); // Create an array of image URLs
+        res.json(images); // Respond with the uploaded image URLs
     } catch (error) {
-        console.error("Error uploading image to Cloudinary:", error);
+        console.error("Error uploading image to Cloudinary:", error); // Log any errors that occur during image upload
     }
 });
 
-
+// Delete images from Cloudinary
 const deleteImages = asyncHandler(async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.params; // Extract the ID of the image to delete from request parameters
     try {
-        const deleted = cloudinaryDeleteImg(id, "images");
-        res.json({ message: "Deleted" });
+        const deleted = cloudinaryDeleteImg(id, "images"); // Delete the image from Cloudinary
+        res.json({ message: "Deleted" }); // Respond with a success message
     } catch (error) {
-        throw new Error(error);
+        throw new Error(error); // Handle errors
     }
 });
 
-
-
+// Export the functions for use in other modules
 module.exports = { createProduct, getProduct, getAllProducts, updateProduct, deleteProduct, addToWishlist, rating, uploadImages, deleteImages };

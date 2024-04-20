@@ -32,5 +32,5 @@ const sendEmail = asyncHandler(async (data, req, res) => {
 
 
 
-module.exports = 
+module.exports =
     sendEmail

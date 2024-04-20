@@ -8,10 +8,10 @@ const { uploadPhoto, blogImgResize } = require('../middlewares/uploadImg');
 router.post('/', authMiddleWare, isAdmin, createBlog);
 
 router.put('/upload/', authMiddleWare, isAdmin, uploadPhoto.array("images", 10),
-blogImgResize ,
-uploadImages);
+    blogImgResize,
+    uploadImages);
 
-router.delete('/delete/:id', authMiddleWare, isAdmin, deleteImages );
+router.delete('/delete/:id', authMiddleWare, isAdmin, deleteImages);
 // Route for handling 'like' functionality of a blog post
 router.put('/likes', authMiddleWare, likeBlog);
 
